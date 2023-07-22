@@ -41,6 +41,9 @@ wasm_rt_func_type_t wasm2c_test_get_func_type(uint32_t param_count, uint32_t res
 /* export: 'add' */
 u32 w2c_test_add(w2c_test*, u32, u32);
 
+/* export for tail-call of 'add' */
+void wasm2c_tailcall_1024_w2c_test_add(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
 #ifdef __cplusplus
 }
 #endif
@@ -92,6 +95,13 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
           func_types_eq(ft, table.data[x].func_type)) || \
        TRAP(CALL_INDIRECT),                              \
    ((t)table.data[x].func)(__VA_ARGS__))
+
+#define RETURN_CALL_INDIRECT(table, ft, x)                        \
+  (LIKELY((x) < table.size && table.data[x].func_tailcallee.fn && \
+          func_types_eq(ft, table.data[x].func_type)) ||          \
+       TRAP(CALL_INDIRECT),                                       \
+   (next->fn = table.data[x].func_tailcallee.fn,                  \
+    *instance_ptr = table.data[x].module_instance))
 
 #ifdef SUPPORT_MEMORY64
 #define RANGE_CHECK(mem, offset, len)              \
@@ -569,6 +579,7 @@ static inline void memory_init(wasm_rt_memory_t* dest,
 typedef struct {
   wasm_rt_func_type_t type;
   wasm_rt_function_ptr_t func;
+  wasm_rt_tailcallee_t func_tailcallee;
   size_t module_offset;
 } wasm_elem_segment_expr_t;
 
@@ -585,9 +596,9 @@ static inline void funcref_table_init(wasm_rt_funcref_table_t* dest,
     TRAP(OOB);
   for (u32 i = 0; i < n; i++) {
     const wasm_elem_segment_expr_t* src_expr = &src[src_addr + i];
-    dest->data[dest_addr + i] =
-        (wasm_rt_funcref_t){src_expr->type, src_expr->func,
-                            (char*)module_instance + src_expr->module_offset};
+    dest->data[dest_addr + i] = (wasm_rt_funcref_t){
+        src_expr->type, src_expr->func, src_expr->func_tailcallee,
+        (char*)module_instance + src_expr->module_offset};
   }
 }
 
@@ -668,13 +679,33 @@ DEFINE_TABLE_FILL(externref)
 #define FUNC_TYPE_T(x) static const char x[]
 #endif
 
+#if (__STDC_VERSION__ >= 201112L) || defined(_Static_assert)
+#define wasm_static_assert(X) _Static_assert(X, "assertion failure")
+#else
+#define wasm_static_assert assert
+#endif
+
 static u32 w2c_test_add_0(w2c_test*, u32, u32);
+static void wasm2c_tailcall_1024_w2c_test_add_0(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
+#ifndef wasm_multi_ii
+#define wasm_multi_ii wasm_multi_ii
+struct wasm_multi_ii {
+  u32 i0;
+  u32 i1;
+};
+#endif  /* wasm_multi_ii */
 
 FUNC_TYPE_T(w2c_test_t0) = "\x92\xfb\x6a\xdf\x49\x07\x0a\x83\xbe\x08\x02\x68\xcd\xf6\x95\x27\x4a\xc2\xf3\xe5\xe4\x7d\x29\x49\xe8\xed\x42\x92\x6a\x9d\xda\xf0";
 
 /* export: 'add' */
 u32 w2c_test_add(w2c_test* instance, u32 var_p0, u32 var_p1) {
   return w2c_test_add_0(instance, var_p0, var_p1);
+}
+
+/* export for tail-call of 'add' */
+void wasm2c_tailcall_1024_w2c_test_add(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_test_add_0(instance_ptr, tail_call_stack, next);
 }
 
 void wasm2c_test_instantiate(w2c_test* instance) {
@@ -707,5 +738,23 @@ u32 w2c_test_add_0(w2c_test* instance, u32 var_p0, u32 var_p1) {
   var_i0 += var_i1;
   FUNC_EPILOGUE;
   return var_i0;
+}
+
+void wasm2c_tailcall_1024_w2c_test_add_0(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm_static_assert(sizeof(struct wasm_multi_ii) <= 1024);
+  wasm_static_assert(sizeof(u32) <= 1024);
+  w2c_test* instance = *instance_ptr;
+  u32 var_p0, var_p1;
+  {
+    struct wasm_multi_ii *tmp = tail_call_stack;
+    var_p0 = tmp->i0;
+    var_p1 = tmp->i1;
+  }
+  u32 var_i0, var_i1;
+  var_i0 = var_p0;
+  var_i1 = var_p1;
+  var_i0 += var_i1;
+  wasm_rt_memcpy(tail_call_stack, &var_i0, sizeof(var_i0));
+  next->fn = NULL;
 }
 ;;; STDOUT ;;)

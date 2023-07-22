@@ -35,6 +35,9 @@ wasm_rt_func_type_t wasm2c_fac_get_func_type(uint32_t param_count, uint32_t resu
 /* export: 'fac' */
 u32 w2c_fac_fac(w2c_fac*, u32);
 
+/* export for tail-call of 'fac' */
+void wasm2c_tailcall_1024_w2c_fac_fac(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
 #ifdef __cplusplus
 }
 #endif

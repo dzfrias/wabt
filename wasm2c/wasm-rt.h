@@ -218,7 +218,10 @@ typedef enum {
   WASM_RT_TRAP_UNREACHABLE,        /** Unreachable instruction executed. */
   WASM_RT_TRAP_CALL_INDIRECT,      /** Invalid call_indirect, for any reason. */
   WASM_RT_TRAP_UNCAUGHT_EXCEPTION, /* Exception thrown and not caught. */
-  WASM_RT_TRAP_UNALIGNED, /** Unaligned atomic instruction executed. */
+  WASM_RT_TRAP_UNALIGNED,          /** Unaligned atomic instruction executed. */
+  WASM_RT_TRAP_UNHANDLED_TAIL_CALL, /** Tail call made to host function or
+                                       wasm2c-generated module that doesn't
+                                       provide tail-call handler */
 #if WASM_RT_MERGED_OOB_AND_EXHAUSTION_TRAPS
   WASM_RT_TRAP_EXHAUSTION = WASM_RT_TRAP_OOB,
 #else
@@ -246,6 +249,15 @@ typedef enum {
 typedef void (*wasm_rt_function_ptr_t)(void);
 
 /**
+ * A pointer to a "tail-callee" function, called by a tail-call
+ * trampoline or by another tail-callee function. (The definition uses a
+ * single-member struct to allow a recursive definition.)
+ */
+typedef struct wasm_rt_tailcallee_t {
+  void (*fn)(void**, void*, struct wasm_rt_tailcallee_t*);
+} wasm_rt_tailcallee_t;
+
+/**
  * The type of a function (an arbitrary number of param and result types).
  * This is represented as an opaque 256-bit ID.
  */
@@ -259,6 +271,8 @@ typedef struct {
   /** The function. The embedder must know the actual C signature of the
    * function and cast to it before calling. */
   wasm_rt_function_ptr_t func;
+  /** An alternate version of the function to be used when tail-called. */
+  wasm_rt_tailcallee_t func_tailcallee;
   /** A function instance is a closure of the function over an instance
    * of the originating module. The module_instance element will be passed into
    * the function at runtime. */
@@ -266,7 +280,10 @@ typedef struct {
 } wasm_rt_funcref_t;
 
 /** Default (null) value of a funcref */
-static const wasm_rt_funcref_t wasm_rt_funcref_null_value = {NULL, NULL, NULL};
+static const wasm_rt_funcref_t wasm_rt_funcref_null_value = {NULL,
+                                                             NULL,
+                                                             {NULL},
+                                                             NULL};
 
 /** The type of an external reference (opaque to WebAssembly). */
 typedef void* wasm_rt_externref_t;

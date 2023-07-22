@@ -64,6 +64,21 @@ void w2c_test_0x0A(w2c_test*);
 /* export: '\E2\9D\A4\EF\B8\8F' */
 void w2c_test_0xE20x9D0xA40xEF0xB80x8F(w2c_test*);
 
+/* export for tail-call of '' */
+void wasm2c_tailcall_1024_w2c_test_(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
+/* export for tail-call of '*\2F' */
+void wasm2c_tailcall_1024_w2c_test_0x2A0x2F(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
+/* export for tail-call of '\3F\3F\2F' */
+void wasm2c_tailcall_1024_w2c_test_0x3F0x3F0x2F(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
+/* export for tail-call of '\0A' */
+void wasm2c_tailcall_1024_w2c_test_0x0A(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
+/* export for tail-call of '\E2\9D\A4\EF\B8\8F' */
+void wasm2c_tailcall_1024_w2c_test_0xE20x9D0xA40xEF0xB80x8F(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
+
 #ifdef __cplusplus
 }
 #endif
@@ -115,6 +130,13 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
           func_types_eq(ft, table.data[x].func_type)) || \
        TRAP(CALL_INDIRECT),                              \
    ((t)table.data[x].func)(__VA_ARGS__))
+
+#define RETURN_CALL_INDIRECT(table, ft, x)                        \
+  (LIKELY((x) < table.size && table.data[x].func_tailcallee.fn && \
+          func_types_eq(ft, table.data[x].func_type)) ||          \
+       TRAP(CALL_INDIRECT),                                       \
+   (next->fn = table.data[x].func_tailcallee.fn,                  \
+    *instance_ptr = table.data[x].module_instance))
 
 #ifdef SUPPORT_MEMORY64
 #define RANGE_CHECK(mem, offset, len)              \
@@ -592,6 +614,7 @@ static inline void memory_init(wasm_rt_memory_t* dest,
 typedef struct {
   wasm_rt_func_type_t type;
   wasm_rt_function_ptr_t func;
+  wasm_rt_tailcallee_t func_tailcallee;
   size_t module_offset;
 } wasm_elem_segment_expr_t;
 
@@ -608,9 +631,9 @@ static inline void funcref_table_init(wasm_rt_funcref_table_t* dest,
     TRAP(OOB);
   for (u32 i = 0; i < n; i++) {
     const wasm_elem_segment_expr_t* src_expr = &src[src_addr + i];
-    dest->data[dest_addr + i] =
-        (wasm_rt_funcref_t){src_expr->type, src_expr->func,
-                            (char*)module_instance + src_expr->module_offset};
+    dest->data[dest_addr + i] = (wasm_rt_funcref_t){
+        src_expr->type, src_expr->func, src_expr->func_tailcallee,
+        (char*)module_instance + src_expr->module_offset};
   }
 }
 
@@ -691,7 +714,14 @@ DEFINE_TABLE_FILL(externref)
 #define FUNC_TYPE_T(x) static const char x[]
 #endif
 
+#if (__STDC_VERSION__ >= 201112L) || defined(_Static_assert)
+#define wasm_static_assert(X) _Static_assert(X, "assertion failure")
+#else
+#define wasm_static_assert assert
+#endif
+
 static void w2c_test__0(w2c_test*);
+static void wasm2c_tailcall_1024_w2c_test__0(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
 
 FUNC_TYPE_T(w2c_test_t0) = "\x36\xa9\xe7\xf1\xc9\x5b\x82\xff\xb9\x97\x43\xe0\xc5\xc4\xce\x95\xd8\x3c\x9a\x43\x0a\xac\x59\xf8\x4e\xf3\xcb\xfa\xb6\x14\x50\x68";
 
@@ -721,6 +751,31 @@ void w2c_test_0x0A(w2c_test* instance) {
 /* export: '\E2\9D\A4\EF\B8\8F' */
 void w2c_test_0xE20x9D0xA40xEF0xB80x8F(w2c_test* instance) {
   w2c_test__0(instance);
+}
+
+/* export for tail-call of '' */
+void wasm2c_tailcall_1024_w2c_test_(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_test__0(instance_ptr, tail_call_stack, next);
+}
+
+/* export for tail-call of '*\2F' */
+void wasm2c_tailcall_1024_w2c_test_0x2A0x2F(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_test__0(instance_ptr, tail_call_stack, next);
+}
+
+/* export for tail-call of '\3F\3F\2F' */
+void wasm2c_tailcall_1024_w2c_test_0x3F0x3F0x2F(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_test__0(instance_ptr, tail_call_stack, next);
+}
+
+/* export for tail-call of '\0A' */
+void wasm2c_tailcall_1024_w2c_test_0x0A(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_test__0(instance_ptr, tail_call_stack, next);
+}
+
+/* export for tail-call of '\E2\9D\A4\EF\B8\8F' */
+void wasm2c_tailcall_1024_w2c_test_0xE20x9D0xA40xEF0xB80x8F(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_test__0(instance_ptr, tail_call_stack, next);
 }
 
 static void init_instance_import(w2c_test* instance, struct w2c_0x5Cmodule* w2c_0x5Cmodule_instance) {
@@ -758,5 +813,10 @@ wasm_rt_func_type_t wasm2c_test_get_func_type(uint32_t param_count, uint32_t res
 void w2c_test__0(w2c_test* instance) {
   FUNC_PROLOGUE;
   FUNC_EPILOGUE;
+}
+
+void wasm2c_tailcall_1024_w2c_test__0(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  w2c_test* instance = *instance_ptr;
+  next->fn = NULL;
 }
 ;;; STDOUT ;;)

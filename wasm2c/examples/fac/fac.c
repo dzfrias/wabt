@@ -45,6 +45,13 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
        TRAP(CALL_INDIRECT),                              \
    ((t)table.data[x].func)(__VA_ARGS__))
 
+#define RETURN_CALL_INDIRECT(table, ft, x)                        \
+  (LIKELY((x) < table.size && table.data[x].func_tailcallee.fn && \
+          func_types_eq(ft, table.data[x].func_type)) ||          \
+       TRAP(CALL_INDIRECT),                                       \
+   (next->fn = table.data[x].func_tailcallee.fn,                  \
+    *instance_ptr = table.data[x].module_instance))
+
 #ifdef SUPPORT_MEMORY64
 #define RANGE_CHECK(mem, offset, len)              \
   do {                                             \
@@ -521,6 +528,7 @@ static inline void memory_init(wasm_rt_memory_t* dest,
 typedef struct {
   wasm_rt_func_type_t type;
   wasm_rt_function_ptr_t func;
+  wasm_rt_tailcallee_t func_tailcallee;
   size_t module_offset;
 } wasm_elem_segment_expr_t;
 
@@ -537,9 +545,9 @@ static inline void funcref_table_init(wasm_rt_funcref_table_t* dest,
     TRAP(OOB);
   for (u32 i = 0; i < n; i++) {
     const wasm_elem_segment_expr_t* src_expr = &src[src_addr + i];
-    dest->data[dest_addr + i] =
-        (wasm_rt_funcref_t){src_expr->type, src_expr->func,
-                            (char*)module_instance + src_expr->module_offset};
+    dest->data[dest_addr + i] = (wasm_rt_funcref_t){
+        src_expr->type, src_expr->func, src_expr->func_tailcallee,
+        (char*)module_instance + src_expr->module_offset};
   }
 }
 
@@ -620,13 +628,25 @@ DEFINE_TABLE_FILL(externref)
 #define FUNC_TYPE_T(x) static const char x[]
 #endif
 
+#if (__STDC_VERSION__ >= 201112L) || defined(_Static_assert)
+#define wasm_static_assert(X) _Static_assert(X, "assertion failure")
+#else
+#define wasm_static_assert assert
+#endif
+
 static u32 w2c_fac_fac_0(w2c_fac*, u32);
+static void wasm2c_tailcall_1024_w2c_fac_fac_0(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next);
 
 FUNC_TYPE_T(w2c_fac_t0) = "\x07\x80\x96\x7a\x42\xf7\x3e\xe6\x70\x5c\x2f\xac\x83\xf5\x67\xd2\xa2\xa0\x69\x41\x5f\xf8\xe7\x96\x7f\x23\xab\x00\x03\x5f\x4a\x3c";
 
 /* export: 'fac' */
 u32 w2c_fac_fac(w2c_fac* instance, u32 var_p0) {
   return w2c_fac_fac_0(instance, var_p0);
+}
+
+/* export for tail-call of 'fac' */
+void wasm2c_tailcall_1024_w2c_fac_fac(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm2c_tailcall_1024_w2c_fac_fac_0(instance_ptr, tail_call_stack, next);
 }
 
 void wasm2c_fac_instantiate(w2c_fac* instance) {
@@ -669,4 +689,26 @@ u32 w2c_fac_fac_0(w2c_fac* instance, u32 var_p0) {
   }
   FUNC_EPILOGUE;
   return var_i0;
+}
+
+void wasm2c_tailcall_1024_w2c_fac_fac_0(void **instance_ptr, void *tail_call_stack, wasm_rt_tailcallee_t *next) {
+  wasm_static_assert(sizeof(u32) <= 1024);
+  w2c_fac* instance = *instance_ptr;
+  u32 var_p0 = *(u32*)tail_call_stack;
+  u32 var_i0, var_i1, var_i2;
+  var_i0 = var_p0;
+  var_i1 = 0u;
+  var_i0 = var_i0 == var_i1;
+  if (var_i0) {
+    var_i0 = 1u;
+  } else {
+    var_i0 = var_p0;
+    var_i1 = var_p0;
+    var_i2 = 1u;
+    var_i1 -= var_i2;
+    var_i1 = w2c_fac_fac_0(instance, var_i1);
+    var_i0 *= var_i1;
+  }
+  wasm_rt_memcpy(tail_call_stack, &var_i0, sizeof(var_i0));
+  next->fn = NULL;
 }

@@ -46,6 +46,19 @@ R"w2c_template(       TRAP(CALL_INDIRECT),                              \
 R"w2c_template(   ((t)table.data[x].func)(__VA_ARGS__))
 )w2c_template"
 R"w2c_template(
+#define RETURN_CALL_INDIRECT(table, ft, x)                        \
+)w2c_template"
+R"w2c_template(  (LIKELY((x) < table.size && table.data[x].func_tailcallee.fn && \
+)w2c_template"
+R"w2c_template(          func_types_eq(ft, table.data[x].func_type)) ||          \
+)w2c_template"
+R"w2c_template(       TRAP(CALL_INDIRECT),                                       \
+)w2c_template"
+R"w2c_template(   (next->fn = table.data[x].func_tailcallee.fn,                  \
+)w2c_template"
+R"w2c_template(    *instance_ptr = table.data[x].module_instance))
+)w2c_template"
+R"w2c_template(
 #ifdef SUPPORT_MEMORY64
 )w2c_template"
 R"w2c_template(#define RANGE_CHECK(mem, offset, len)              \
@@ -940,6 +953,8 @@ R"w2c_template(  wasm_rt_func_type_t type;
 )w2c_template"
 R"w2c_template(  wasm_rt_function_ptr_t func;
 )w2c_template"
+R"w2c_template(  wasm_rt_tailcallee_t func_tailcallee;
+)w2c_template"
 R"w2c_template(  size_t module_offset;
 )w2c_template"
 R"w2c_template(} wasm_elem_segment_expr_t;
@@ -971,11 +986,11 @@ R"w2c_template(  for (u32 i = 0; i < n; i++) {
 )w2c_template"
 R"w2c_template(    const wasm_elem_segment_expr_t* src_expr = &src[src_addr + i];
 )w2c_template"
-R"w2c_template(    dest->data[dest_addr + i] =
+R"w2c_template(    dest->data[dest_addr + i] = (wasm_rt_funcref_t){
 )w2c_template"
-R"w2c_template(        (wasm_rt_funcref_t){src_expr->type, src_expr->func,
+R"w2c_template(        src_expr->type, src_expr->func, src_expr->func_tailcallee,
 )w2c_template"
-R"w2c_template(                            (char*)module_instance + src_expr->module_offset};
+R"w2c_template(        (char*)module_instance + src_expr->module_offset};
 )w2c_template"
 R"w2c_template(  }
 )w2c_template"
@@ -1122,6 +1137,17 @@ R"w2c_template(#define FUNC_TYPE_DECL_EXTERN_T(x) extern const char x[]
 R"w2c_template(#define FUNC_TYPE_EXTERN_T(x) const char x[]
 )w2c_template"
 R"w2c_template(#define FUNC_TYPE_T(x) static const char x[]
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#if (__STDC_VERSION__ >= 201112L) || defined(_Static_assert)
+)w2c_template"
+R"w2c_template(#define wasm_static_assert(X) _Static_assert(X, "assertion failure")
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#define wasm_static_assert assert
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"

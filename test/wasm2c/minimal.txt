@@ -87,6 +87,13 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
        TRAP(CALL_INDIRECT),                              \
    ((t)table.data[x].func)(__VA_ARGS__))
 
+#define RETURN_CALL_INDIRECT(table, ft, x)                        \
+  (LIKELY((x) < table.size && table.data[x].func_tailcallee.fn && \
+          func_types_eq(ft, table.data[x].func_type)) ||          \
+       TRAP(CALL_INDIRECT),                                       \
+   (next->fn = table.data[x].func_tailcallee.fn,                  \
+    *instance_ptr = table.data[x].module_instance))
+
 #ifdef SUPPORT_MEMORY64
 #define RANGE_CHECK(mem, offset, len)              \
   do {                                             \
@@ -563,6 +570,7 @@ static inline void memory_init(wasm_rt_memory_t* dest,
 typedef struct {
   wasm_rt_func_type_t type;
   wasm_rt_function_ptr_t func;
+  wasm_rt_tailcallee_t func_tailcallee;
   size_t module_offset;
 } wasm_elem_segment_expr_t;
 
@@ -579,9 +587,9 @@ static inline void funcref_table_init(wasm_rt_funcref_table_t* dest,
     TRAP(OOB);
   for (u32 i = 0; i < n; i++) {
     const wasm_elem_segment_expr_t* src_expr = &src[src_addr + i];
-    dest->data[dest_addr + i] =
-        (wasm_rt_funcref_t){src_expr->type, src_expr->func,
-                            (char*)module_instance + src_expr->module_offset};
+    dest->data[dest_addr + i] = (wasm_rt_funcref_t){
+        src_expr->type, src_expr->func, src_expr->func_tailcallee,
+        (char*)module_instance + src_expr->module_offset};
   }
 }
 
@@ -660,6 +668,12 @@ DEFINE_TABLE_FILL(externref)
 #define FUNC_TYPE_DECL_EXTERN_T(x) extern const char x[]
 #define FUNC_TYPE_EXTERN_T(x) const char x[]
 #define FUNC_TYPE_T(x) static const char x[]
+#endif
+
+#if (__STDC_VERSION__ >= 201112L) || defined(_Static_assert)
+#define wasm_static_assert(X) _Static_assert(X, "assertion failure")
+#else
+#define wasm_static_assert assert
 #endif
 
 void wasm2c_test_instantiate(w2c_test* instance) {
